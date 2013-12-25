@@ -1,0 +1,17 @@
+{
+  "author" : "Mike Roberts <mike@kik.com>",
+  "name" : "node-crashlytics",
+  "description" : "An unofficial client for the Crashlytics API",
+  "version" : "0.0.1",
+  "license" : "MIT" ,
+  "repository" : {
+    "type" : "git",
+    "url" : "git://github.com/mproberts/node-crashlytics.git"
+  },
+  "engines" : {
+    "node" : ">=0.8"
+  },
+  "dependencies" : {
+  },
+  "main" : "index.js"
+}
