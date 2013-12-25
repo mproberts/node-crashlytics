@@ -15,8 +15,9 @@ function encodeParamters(parameters) {
 };
 
 function Crashlytics(email, password, developerToken) {
-	this.email    = email;
-	this.password = password;
+	this.email          = email;
+	this.password       = password;
+	this.developerToken = developerToken;
 
 	return this;
 };
@@ -48,7 +49,7 @@ Crashlytics.prototype._apiCall = function(app, slug, postData, callback) {
 
 	path += slug;
 
-	var headers = { 'X-CRASHLYTICS-DEVELOPER-TOKEN': Crashlytics.DEVELOPER_TOKEN };
+	var headers = { 'X-CRASHLYTICS-DEVELOPER-TOKEN': this.developerToken };
 
 	if (this.accessToken) {
 		headers['X-CRASHLYTICS-ACCESS-TOKEN'] = this.accessToken;
