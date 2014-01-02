@@ -22,7 +22,16 @@ function Crashlytics(email, password, developerToken) {
 	return this;
 };
 
-Crashlytics.prototype._apiCall = function(app, slug, postData, callback) {
+Crashlytics.ENABLE_DEBUGGING = false;
+
+Crashlytics.Metric = {
+	Events:  'events_count',
+	Issues:  'issues_count',
+	Crashes: 'crashes_count',
+	Users:   'impacted_devices_count'
+};
+
+Crashlytics.prototype._apiCall = function(app, slug, options, postData, callback) {
 	if (app) {
 		var appDescription;
 
@@ -39,7 +48,7 @@ Crashlytics.prototype._apiCall = function(app, slug, postData, callback) {
 
 	var path = '/api/v2';
 
-	if (this.organization) {
+	if (this.organization && (typeof(options.includeOrganization) === 'undefined' || options.includeOrganization)) {
 		path += '/organizations/'+this.organization
 	}
 
@@ -59,9 +68,15 @@ Crashlytics.prototype._apiCall = function(app, slug, postData, callback) {
 		headers['content-length'] = postData.length;
 	}
 
+	headers['accept'] = 'application/json';
+
+	if (Crashlytics.ENABLE_DEBUGGING) {
+		console.log(path);
+	}
+
 	var self = this;
 	var apiRequest = https.request({
-		hostname: 'api.crashlytics.com',
+		hostname: (!!options.useWww ? 'www' : 'api') + '.crashlytics.com',
 		port:     443,
 		path:     path,
 		method:   postData ? 'POST' : 'GET',
@@ -111,7 +126,7 @@ Crashlytics.prototype.login = function(callback) {
 	sessionRequest.end();
 
 	function sessionRequestComplete(result) {
-		self._apiCall(null, '/session.json', encodeParamters({email: self.email, password: self.password}), loginRequestComplete);
+		self._apiCall(null, '/session.json', {}, encodeParamters({email: self.email, password: self.password}), loginRequestComplete);
 
 		function loginRequestComplete(err, body) {
 			if (err) {
@@ -123,7 +138,7 @@ Crashlytics.prototype.login = function(callback) {
 				self.organizationAlias = body.current_organization.alias;
 				self.organization = body.current_organization.id;
 
-				self._apiCall(null, '/apps.json', null, function(err, apps) {
+				self._apiCall(null, '/apps.json', {}, null, function(err, apps) {
 					self.apps = apps;
 
 					callback(null, self);
@@ -140,7 +155,7 @@ Crashlytics.prototype.builds = function(app, callback) {
 
 	callback = callback || function() {};
 
-	return this._apiCall(app, '/builds.json?limit=1000', null, callback);
+	return this._apiCall(app, '/builds.json?limit=1000', {}, null, callback);
 };
 
 Crashlytics.prototype.issues = function(app, options, callback) {
@@ -167,7 +182,41 @@ Crashlytics.prototype.issues = function(app, options, callback) {
 	options.status_equals = options.status || 'all';
 	options.event_type    = options.event_type || 'all';
 
-	return this._apiCall(app, '/issues.json?'+encodeParamters(options), null, processResult);
+	return this._apiCall(app, '/issues.json?'+encodeParamters(options), {}, null, processResult);
+};
+
+Crashlytics.prototype.search = function(app, query, options, callback) {
+	if (!this.accessToken) {
+		return callback('Must be logged in');
+	}
+
+	if (!callback && typeof(options) === 'function') {
+		callback = options;
+		options = null;
+	}
+
+	if (!app) {
+		return callback('No app specified');
+	}
+
+	options = options || {};
+	callback = callback || function() {};
+
+	function processResult(err, issues) {
+		return callback(err, issues);
+	}
+
+	options.build       = options.build || 'all';
+	options.start       = options.start || ~~((+new Date()/1000) - 2592000);
+	options.end         = options.end || ~~(+new Date()/1000);
+	options.query       = query;
+	options.count       = 1000;
+	options.page        = 1;
+
+	return this._apiCall(app, '/search?'+encodeParamters(options), {
+		includeOrganization: false,
+		useWww: true
+	}, null, processResult);
 };
 
 Crashlytics.prototype.events = function(app, options, callback) {
@@ -198,14 +247,13 @@ Crashlytics.prototype.events = function(app, options, callback) {
 	}
 
 	options.build       = options.build || 'all';
-	options.status      = options.status || 'all';
 	options.event_type  = options.event_type || 'all';
-	options.metric      = 'events_count';
+	options.metric      = options.metric || Crashlytics.Metric.Events;
 	options.start       = options.start || ~~((+new Date()/1000) - 2592000);
 	options.end         = options.end || ~~(+new Date()/1000);
 	options.data_points = options.data_points || ~~((options.end - options.start) / 3600);
 
-	return this._apiCall(app, '/metrics/timeseries.json?'+encodeParamters(options), null, processResult);
+	return this._apiCall(app, '/metrics/timeseries?'+encodeParamters(options), {}, null, processResult);
 };
 
 module.exports = Crashlytics;
