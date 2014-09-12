@@ -11,7 +11,7 @@ var api = new Crashlytics(
 // set up your session
 api.login(function(err, api) {
 	if (!err) {
-		var now = ~~((+new Date()/1000);
+		var now = ~~(+new Date()/1000);
 		var options = {
 			end   : now,
 			start : now - 2592000
