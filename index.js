@@ -186,6 +186,16 @@ Crashlytics.prototype.issues = function(app, options, callback) {
 		options.build_equals = options.build;
 	}
 
+	if (options.start) {
+		options.created_gte = options.start;
+	}
+
+	if (options.end) {
+		options.created_lte = options.end;
+	} else {
+		options.created_lte = ~~(+new Date()/1000);
+	}
+
 	return this._apiCall(app, '/issues.json?'+encodeParamters(options), {}, null, processResult);
 };
 
